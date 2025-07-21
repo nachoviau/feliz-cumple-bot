@@ -96,6 +96,88 @@ class WhatsAppClient {
     }
 
     /**
+     * Simula que está escribiendo antes de enviar un mensaje
+     * @param {string} to - Destinatario del mensaje
+     * @param {string} message - Mensaje a enviar
+     * @returns {Promise<void>}
+     */
+    async sendMessageWithTyping(to, message) {
+        try {
+            console.log('⌨️ Simulando escritura...');
+            
+            // Obtener el chat
+            const chat = await this.client.getChatById(to);
+            if (!chat) {
+                console.log('⚠️ No se pudo obtener el chat, enviando sin typing...');
+                await this.client.sendMessage(to, message);
+                return;
+            }
+            
+            // Activar el chat
+            await chat.sendSeen();
+            console.log('✅ Chat activado');
+            
+            // Intentar activar el estado de typing usando la API
+            let typingActivated = false;
+            
+            try {
+                // Método 1: Usar sendStateTyping del cliente
+                await this.client.sendStateTyping(to);
+                console.log('✅ Estado de typing activado con sendStateTyping');
+                typingActivated = true;
+            } catch (error1) {
+                console.log('⚠️ sendStateTyping falló, intentando método alternativo...');
+                
+                try {
+                    // Método 2: Usar sendStateTyping del chat
+                    await chat.sendStateTyping();
+                    console.log('✅ Estado de typing activado con chat.sendStateTyping');
+                    typingActivated = true;
+                } catch (error2) {
+                    console.log('⚠️ Método alternativo también falló, continuando sin typing...');
+                }
+            }
+            
+            // Calcular tiempo de escritura basado en la longitud del mensaje
+            const baseTime = 2000; // 2 segundos base
+            const charTime = message.length * 150; // 150ms por carácter
+            const typingTime = Math.min(baseTime + charTime, 15000); // Máximo 15 segundos
+            
+            console.log(`⏱️ Simulando escritura por ${typingTime}ms (${message.length} caracteres)`);
+            
+            // Esperar el tiempo calculado
+            await new Promise(resolve => setTimeout(resolve, typingTime));
+            
+            // Intentar desactivar el estado de typing
+            if (typingActivated) {
+                try {
+                    await this.client.clearState(to);
+                    console.log('✅ Estado de typing desactivado');
+                } catch (clearError) {
+                    console.log('⚠️ No se pudo desactivar el estado de typing');
+                }
+            }
+            
+            // Enviar el mensaje usando la API
+            console.log('📤 Enviando mensaje...');
+            await this.client.sendMessage(to, message);
+            console.log(`✅ Mensaje enviado a ${to}: "${message}"`);
+            
+        } catch (error) {
+            console.error('❌ Error al enviar mensaje con typing:', error);
+            console.log('🔄 Intentando envío normal...');
+            
+            // Fallback: enviar sin typing
+            try {
+                await this.client.sendMessage(to, message);
+                console.log(`✅ Mensaje enviado (fallback) a ${to}: "${message}"`);
+            } catch (fallbackError) {
+                console.error('❌ Error en fallback también:', fallbackError);
+            }
+        }
+    }
+
+    /**
      * Maneja un mensaje de cumpleaños detectado
      * @param {Object} message - Objeto del mensaje de WhatsApp
      * @param {Object} analysis - Resultado del análisis
@@ -129,7 +211,7 @@ class WhatsAppClient {
         for (let i = 0; i < messages.length; i++) {
             const msg = messages[i].trim();
             if (msg) {
-                await this.sendMessage(message.from, msg);
+                await this.sendMessageWithTyping(message.from, msg);
                 console.log(`✅ Mensaje ${i + 1} enviado: "${msg}"`);
                 
                 // Pequeño delay entre mensajes si hay más de uno

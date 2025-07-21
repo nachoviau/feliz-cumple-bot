@@ -15,7 +15,7 @@ class MessageAnalyzer {
             /\b(cumple)\b/i,
             /\b(cumplee)\b/i,
             /\b(felizz)\b/i,
-
+            /\b(felicidades)\b/i,
             // Emojis de cumpleaños
             /🎂|🎉|🎊|🎈|🎁|🥳|🎆|🎇/,
             
